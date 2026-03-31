@@ -10,6 +10,10 @@ export default function App() {
   const [error, setError] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [vendiendoId, setVendiendoId] = useState(null)
+  
+  // Estado para controlar el formulario
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', precio: '', stock: '' })
+  const [agregando, setAgregando] = useState(false)
 
   const cargarProductos = async () => {
     try {
@@ -46,8 +50,40 @@ export default function App() {
     cargarProductos()
   }, [])
 
+  // Función para agregar un producto a la Base de Datos
+  const agregarProducto = async (e) => {
+    e.preventDefault();
+    try {
+      setAgregando(true);
+      setError('');
+      
+      const payload = {
+        nombre: nuevoProducto.nombre,
+        precio: Number(nuevoProducto.precio),
+        stock: Number(nuevoProducto.stock)
+      };
+
+      const response = await fetch(API_PRODUCTOS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error('Error al guardar el producto');
+
+      setMensaje(`Producto agregado: ${nuevoProducto.nombre}`);
+      setNuevoProducto({ nombre: '', precio: '', stock: '' });
+      cargarProductos();
+      
+      setTimeout(() => setMensaje(''), 3000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAgregando(false);
+    }
+  };
+
   const venderProducto = async (producto) => {
-    // 1. Nueva barrera de seguridad por si acaso
     if (producto.stock <= 0) {
       setError(`El producto ${producto.nombre} está agotado.`);
       setTimeout(() => setError(''), 3000);
@@ -73,7 +109,23 @@ export default function App() {
     }
   }
 
- 
+  // Función para eliminar producto
+  const eliminarProducto = async (id) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+    
+    try {
+      setError('');
+      const response = await fetch(`${API_PRODUCTOS}/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('No se pudo eliminar el producto');
+
+      setMensaje('Producto eliminado del inventario');
+      cargarProductos();
+      setTimeout(() => setMensaje(''), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   const totalStock = productos.reduce((acc, p) => acc + p.stock, 0)
 
   return (
@@ -104,6 +156,40 @@ export default function App() {
         </div>
       </div>
 
+      <div className="add-product-card">
+        <h3 className="add-product-title">Agregar Nuevo Producto</h3>
+        <form onSubmit={agregarProducto} className="add-product-form">
+          <input 
+            required 
+            placeholder="Nombre del producto" 
+            value={nuevoProducto.nombre} 
+            onChange={e => setNuevoProducto({...nuevoProducto, nombre: e.target.value})}
+            className="form-input flex-2"
+          />
+          <input 
+            required 
+            type="number" 
+            min="0"
+            placeholder="Precio" 
+            value={nuevoProducto.precio} 
+            onChange={e => setNuevoProducto({...nuevoProducto, precio: e.target.value})}
+            className="form-input flex-1"
+          />
+          <input 
+            required 
+            type="number" 
+            min="0"
+            placeholder="Stock Inicial" 
+            value={nuevoProducto.stock} 
+            onChange={e => setNuevoProducto({...nuevoProducto, stock: e.target.value})}
+            className="form-input flex-1"
+          />
+          <button type="submit" disabled={agregando} className="btn-submit">
+            {agregando ? 'Guardando...' : 'Guardar Producto'}
+          </button>
+        </form>
+      </div>
+
       <div className="table-wrapper">
         <table className="main-table">
           <thead>
@@ -130,19 +216,22 @@ export default function App() {
                   </span>
                 </td>
                 <td>
-                  {/* 3. Botones agrupados */}
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="action-buttons">
                     <button
                       className="btn-sell"
                       onClick={() => venderProducto(p)}
                       disabled={p.stock <= 0 || vendiendoId === p.id}
                     >
-                      {/* Cambio de texto dinámico si no hay stock */}
                       {p.stock <= 0 ? 'Agotado' : (vendiendoId === p.id ? '...' : 'Vender')}
                     </button>
                     
-                    
-                   
+                    <button 
+                      onClick={() => eliminarProducto(p.id)}
+                      className="btn-delete"
+                      title="Eliminar"
+                    >
+                      
+                    </button>
                   </div>
                 </td>
               </tr>

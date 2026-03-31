@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 @RestController
 @RequestMapping("/api/venta")
-@CrossOrigin("*")
+@CrossOrigin(origins = "*")
 public class VentaController {
     
     // Agregamos la herramienta de Spring para enviar mensajes a Kafka
